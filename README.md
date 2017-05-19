@@ -1,4 +1,4 @@
-wolfSSL Example Applications
+   :wolfSSL Example Applications
 ============================
 
 This repository contains example applications, written in C, which
