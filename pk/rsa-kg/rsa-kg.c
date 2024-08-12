@@ -50,8 +50,45 @@ void usage()
     fprintf(stderr, "                    Range: 1024-4096\n");
     fprintf(stderr, "  -priv <filename>  Private key filename\n");
     fprintf(stderr, "  -pub <filename>   Public key filename\n");
+    fprintf(stderr, "  -raw              Raw output of RSA key\n");
     fprintf(stderr, "\n");
 }
+
+static void PrintBigInt(mp_int* in)
+{
+    byte* buf;
+    int   bufSz;
+    int   i;
+
+    bufSz = mp_unsigned_bin_size(in);
+    buf = malloc(bufSz);
+    mp_to_unsigned_bin(in, buf);
+    for (i = 0; i < bufSz; i++)
+        printf("%02X", buf[i]);
+    free(buf);
+}
+
+static int RawOutput(RsaKey* key)
+{
+
+    printf("N : ");
+    PrintBigInt(&key->n);
+    printf("\n");
+
+#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+    printf("P - Q - dP - dQ - u : ");
+    PrintBigInt(&key->p);
+    PrintBigInt(&key->q);
+#if defined(WOLFSSL_KEY_GEN) || defined(OPENSSL_EXTRA) || !defined(RSA_LOW_MEM)
+    PrintBigInt(&key->dP);
+    PrintBigInt(&key->dQ);
+    PrintBigInt(&key->u);
+#endif
+    printf("\n");
+#endif
+    return 0;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -62,6 +99,7 @@ int main(int argc, char** argv)
     int ret = 0;
     int bits = DEF_RSA_KEY_SIZE;
     int sz;
+    byte rawOutput;
     unsigned char derBuf[MAX_DER_SIZE];
     FILE* f;
     const char* pubKey = kRsaPubKey;
@@ -97,6 +135,9 @@ int main(int argc, char** argv)
                 return 1;
             }
             pubKey = *argv;
+        }
+        else if (XSTRNCMP(*argv, "-raw", 5) == 0) {
+            rawOutput = 1;
         }
         else if (XSTRNCMP(*argv, "-help", 6) == 0) {
             usage();
@@ -222,6 +263,10 @@ int main(int argc, char** argv)
                 fwrite(derBuf, 1, sz, f);
             }
             fclose(f);
+        }
+
+        if (rawOutput) {
+            RawOutput(pRsaKey);
         }
     }
 
